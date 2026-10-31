@@ -89,11 +89,11 @@ class AnalyticsEngine:
 
         # MRR Normalization: Daily * 30, Weekly * 4.333, Monthly * 1, Yearly / 12
         cur.execute(f"""
-        SELECT 
+        SELECT
             COUNT(s.id) as active_count,
             COUNT(DISTINCT s.customer_id) as active_customers,
             COALESCE(SUM(
-                CASE 
+                CASE
                     WHEN LOWER(COALESCE(p.billing_cycle, 'monthly')) = 'daily' THEN COALESCE(s.total_price, 0.0) * 30.0
                     WHEN LOWER(COALESCE(p.billing_cycle, 'monthly')) = 'weekly' THEN COALESCE(s.total_price, 0.0) * 4.333
                     WHEN LOWER(COALESCE(p.billing_cycle, 'monthly')) = 'monthly' THEN COALESCE(s.total_price, 0.0)
@@ -142,7 +142,7 @@ class AnalyticsEngine:
 
         # 3. Churn estimation (Closed subscriptions vs total)
         cur.execute("""
-        SELECT 
+        SELECT
             COUNT(CASE WHEN status = 'Closed' THEN 1 END) as closed_count,
             COUNT(*) as total_subs
         FROM subscriptions;
@@ -178,7 +178,7 @@ class AnalyticsEngine:
         cur = conn.cursor()
 
         cur.execute("""
-        SELECT 
+        SELECT
             strftime('%Y-%m', invoice_date) as month_key,
             COALESCE(SUM(total_amount), 0.0) as billed_amount,
             COALESCE(SUM(amount_paid), 0.0) as collected_amount
@@ -203,7 +203,7 @@ class AnalyticsEngine:
         cur = conn.cursor()
 
         cur.execute("""
-        SELECT 
+        SELECT
             p.name as plan_name,
             COALESCE(p.billing_cycle, 'Monthly') as billing_cycle,
             COUNT(s.id) as subscriber_count,
@@ -229,7 +229,7 @@ class AnalyticsEngine:
         cur = conn.cursor()
 
         cur.execute("""
-        SELECT 
+        SELECT
             invoice_number,
             due_date,
             (total_amount - amount_paid) as balance_due,
@@ -273,7 +273,7 @@ class AnalyticsEngine:
         conn = self.get_connection()
         cur = conn.cursor()
         cur.execute("""
-        SELECT 
+        SELECT
             payment_method,
             COUNT(id) as txn_count,
             COALESCE(SUM(amount), 0.0) as total_volume

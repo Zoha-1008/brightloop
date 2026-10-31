@@ -315,7 +315,7 @@ class FinanceDashboardFrame(ttk.Frame):
             params.append(plan_id)
 
         cur.execute(f"""
-        SELECT 
+        SELECT
             i.id,
             i.invoice_number,
             COALESCE(c.company, c.name, u.email, 'Valued Customer') as customer_name,

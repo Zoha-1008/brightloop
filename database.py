@@ -251,6 +251,10 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS taxes (
                 id INT AUTO_INCREMENT PRIMARY KEY,
+                tax_code VARCHAR(50) UNIQUE,
+                region_name VARCHAR(100),
+                tax_name VARCHAR(100),
+                rate DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
                 name VARCHAR(100) NOT NULL,
                 rate_percentage DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
                 is_active TINYINT(1) DEFAULT 1
@@ -263,6 +267,9 @@ def init_db():
                 description TEXT,
                 discount_type VARCHAR(20) NOT NULL,
                 value DECIMAL(10, 2) NOT NULL,
+                min_order_amount DECIMAL(10, 2) DEFAULT 0.00,
+                valid_from DATE,
+                valid_until DATE,
                 min_purchase DECIMAL(10, 2) DEFAULT 0.00,
                 min_quantity INT DEFAULT 0,
                 start_date DATE,
@@ -281,6 +288,8 @@ def init_db():
                 invoice_date DATE NOT NULL,
                 due_date DATE NOT NULL,
                 subtotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                discount_id INT NULL,
+                tax_id INT NULL,
                 tax_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
                 discount_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
                 total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
@@ -314,6 +323,8 @@ def init_db():
                 payment_date DATE NOT NULL,
                 payment_method VARCHAR(50) NOT NULL,
                 amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                transaction_id VARCHAR(100) UNIQUE,
+                status VARCHAR(20) DEFAULT 'Success',
                 transaction_ref VARCHAR(100),
                 notes TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -451,6 +462,10 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS taxes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tax_code TEXT UNIQUE,
+                region_name TEXT,
+                tax_name TEXT,
+                rate REAL NOT NULL DEFAULT 0.0,
                 name TEXT NOT NULL,
                 rate_percentage REAL NOT NULL DEFAULT 0.0,
                 is_active INTEGER DEFAULT 1
@@ -463,6 +478,9 @@ def init_db():
                 description TEXT,
                 discount_type TEXT NOT NULL,
                 value REAL NOT NULL,
+                min_order_amount REAL DEFAULT 0.0,
+                valid_from TEXT,
+                valid_until TEXT,
                 min_purchase REAL DEFAULT 0.0,
                 min_quantity INTEGER DEFAULT 0,
                 start_date TEXT,
@@ -481,6 +499,8 @@ def init_db():
                 invoice_date TEXT NOT NULL,
                 due_date TEXT NOT NULL,
                 subtotal REAL NOT NULL DEFAULT 0.0,
+                discount_id INTEGER,
+                tax_id INTEGER,
                 tax_amount REAL NOT NULL DEFAULT 0.0,
                 discount_amount REAL NOT NULL DEFAULT 0.0,
                 total_amount REAL NOT NULL DEFAULT 0.0,
@@ -514,6 +534,8 @@ def init_db():
                 payment_date TEXT NOT NULL,
                 payment_method TEXT NOT NULL,
                 amount REAL NOT NULL DEFAULT 0.0,
+                transaction_id TEXT UNIQUE,
+                status TEXT DEFAULT 'Success',
                 transaction_ref TEXT,
                 notes TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -528,6 +550,7 @@ def init_db():
 
     # In case teammate's customers table already existed without extra columns, add them safely
     ensure_customer_columns()
+    ensure_billing_columns()
 
     # High-performance indexes for < 2.0s SLA
     indexes = [
@@ -565,6 +588,75 @@ def ensure_customer_columns():
             db.execute_query(f"ALTER TABLE customers ADD COLUMN {col_name} {col_def}")
         except Exception:
             pass  # Column already exists
+
+
+def ensure_billing_columns():
+    """Add reporting and billing columns to databases created by earlier schema versions."""
+    required_columns = {
+        'taxes': {
+            'tax_code': 'VARCHAR(50)',
+            'region_name': 'VARCHAR(100)',
+            'tax_name': 'VARCHAR(100)',
+            'rate': 'DECIMAL(5, 2) DEFAULT 0.00'
+        },
+        'discounts': {
+            'min_order_amount': 'DECIMAL(10, 2) DEFAULT 0.00',
+            'valid_from': 'DATE',
+            'valid_until': 'DATE'
+        },
+        'invoices': {
+            'discount_id': 'INT NULL',
+            'tax_id': 'INT NULL'
+        },
+        'payments': {
+            'transaction_id': 'VARCHAR(100)',
+            'status': "VARCHAR(20) DEFAULT 'Success'"
+        }
+    }
+
+    for table_name, columns in required_columns.items():
+        if db.engine == 'mysql':
+            existing_columns = {
+                column['Field'] for column in db.fetch_all(f"SHOW COLUMNS FROM {table_name}")
+            }
+        else:
+            existing_columns = {
+                column['name'] for column in db.fetch_all(f"PRAGMA table_info({table_name})")
+            }
+
+        for column_name, column_definition in columns.items():
+            if column_name not in existing_columns:
+                db.execute_query(
+                    f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+                )
+
+    db.execute_query("UPDATE taxes SET tax_name = name WHERE tax_name IS NULL")
+    db.execute_query("UPDATE taxes SET region_name = 'Legacy' WHERE region_name IS NULL")
+    db.execute_query(
+        "UPDATE taxes SET rate = rate_percentage WHERE rate = 0 AND rate_percentage <> 0"
+    )
+    for tax in db.fetch_all("SELECT id FROM taxes WHERE tax_code IS NULL"):
+        db.execute_query(
+            "UPDATE taxes SET tax_code = %s WHERE id = %s",
+            (f"LEGACY-{tax['id']}", tax['id'])
+        )
+
+    db.execute_query(
+        "UPDATE discounts SET min_order_amount = min_purchase "
+        "WHERE min_order_amount = 0 AND min_purchase <> 0"
+    )
+    db.execute_query(
+        "UPDATE discounts SET valid_from = start_date "
+        "WHERE valid_from IS NULL AND start_date IS NOT NULL"
+    )
+    db.execute_query(
+        "UPDATE discounts SET valid_until = end_date "
+        "WHERE valid_until IS NULL AND end_date IS NOT NULL"
+    )
+    db.execute_query(
+        "UPDATE payments SET transaction_id = transaction_ref "
+        "WHERE transaction_id IS NULL AND transaction_ref IS NOT NULL"
+    )
 
 
 def seed_sample_data():
@@ -777,8 +869,12 @@ def seed_sample_data():
         ]
         for t in taxes_data:
             db.execute_query(
-                "INSERT INTO taxes (tax_code, region_name, tax_name, rate, is_active) VALUES (%s, %s, %s, %s, %s)",
-                t
+                """
+                INSERT INTO taxes
+                (tax_code, region_name, tax_name, rate, name, rate_percentage, is_active)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (t[0], t[1], t[2], t[3], t[2], t[3], t[4])
             )
 
         # Discounts
@@ -811,7 +907,7 @@ def seed_sample_data():
                 db.execute_query(
                     """
                     INSERT INTO invoices
-                    (invoice_number, subscription_id, customer_id, issue_date, due_date, subtotal, discount_id, discount_amount, tax_id, tax_amount, total_amount, status, notes)
+                    (invoice_number, subscription_id, customer_id, invoice_date, due_date, subtotal, discount_id, discount_amount, tax_id, tax_amount, total_amount, status, notes)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     inv
@@ -828,10 +924,11 @@ def seed_sample_data():
                 for p in payments_data:
                     db.execute_query(
                         """
-                        INSERT INTO payments (transaction_id, invoice_id, customer_id, payment_method, amount, status, notes)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO payments
+                        (transaction_id, invoice_id, customer_id, payment_date, payment_method, amount, status, transaction_ref, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """,
-                        p
+                        (p[0], p[1], p[2], date.today().isoformat(), p[3], p[4], p[5], p[0], p[6])
                     )
     print("[Database] Sample data seeding complete.")
 

@@ -127,7 +127,7 @@ class InvoiceManager:
         db.execute_query(
             """
             INSERT INTO invoices
-            (invoice_number, subscription_id, customer_id, issue_date, due_date,
+            (invoice_number, subscription_id, customer_id, invoice_date, due_date,
              subtotal, discount_id, discount_amount, tax_id, tax_amount, total_amount, status, notes)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,

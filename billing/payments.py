@@ -99,10 +99,12 @@ class PaymentManager:
         # 1. Insert Payment
         db.execute_query(
             """
-            INSERT INTO payments (transaction_id, invoice_id, customer_id, payment_method, amount, status, notes)
-            VALUES (%s, %s, %s, %s, %s, 'Success', %s)
+            INSERT INTO payments
+            (transaction_id, invoice_id, customer_id, payment_date, payment_method, amount, status, transaction_ref, notes)
+            VALUES (%s, %s, %s, %s, %s, %s, 'Success', %s, %s)
             """,
-            (txn_id, invoice_id, customer_id, payment_method, amt, notes or f"{payment_method} settlement")
+            (txn_id, invoice_id, customer_id, datetime.date.today().isoformat(),
+             payment_method, amt, txn_id, notes or f"{payment_method} settlement")
         )
 
         # 2. Mark Invoice as Paid

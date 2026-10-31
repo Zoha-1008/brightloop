@@ -238,7 +238,7 @@ class ReportsFrame(ttk.Frame):
                 ("Status", 95, "center")
             ]
             cur.execute("""
-            SELECT 
+            SELECT
                 i.invoice_number,
                 COALESCE(c.company, c.name, u.email, 'Valued Customer') as customer,
                 i.invoice_date,
@@ -267,7 +267,7 @@ class ReportsFrame(ttk.Frame):
                 ("Status", 100, "center")
             ]
             cur.execute("""
-            SELECT 
+            SELECT
                 COALESCE(s.subscription_code, 'SUB-' || s.id) as subscription_number,
                 COALESCE(c.company, c.name, u.email, 'Valued Customer') as customer,
                 p.name as plan_name,
@@ -294,13 +294,13 @@ class ReportsFrame(ttk.Frame):
                 ("Balance Due ($)", 120, "e")
             ]
             cur.execute("""
-            SELECT 
+            SELECT
                 i.invoice_number,
                 COALESCE(c.company, c.name, u.email, 'Valued Customer') as customer,
                 u.email,
                 i.due_date,
                 CAST(julianday('now') - julianday(i.due_date) AS INTEGER) as days_overdue,
-                CASE 
+                CASE
                     WHEN (julianday('now') - julianday(i.due_date)) <= 30 THEN '1-30 Days'
                     WHEN (julianday('now') - julianday(i.due_date)) <= 60 THEN '31-60 Days'
                     WHEN (julianday('now') - julianday(i.due_date)) <= 90 THEN '61-90 Days'
@@ -326,7 +326,7 @@ class ReportsFrame(ttk.Frame):
                 ("Notes", 180, "w")
             ]
             cur.execute("""
-            SELECT 
+            SELECT
                 p.id,
                 p.transaction_ref,
                 i.invoice_number,
@@ -352,7 +352,7 @@ class ReportsFrame(ttk.Frame):
                 ("Total Revenue ($)", 130, "e")
             ]
             cur.execute("""
-            SELECT 
+            SELECT
                 p.name,
                 COALESCE(p.category, 'Software') as type,
                 COALESCE(p.price, 0.0) as sales_price,

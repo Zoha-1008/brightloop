@@ -70,8 +70,12 @@ class TaxManager:
             return False, f"Tax code '{code}' already exists."
 
         db.execute_query(
-            "INSERT INTO taxes (tax_code, region_name, tax_name, rate, is_active) VALUES (%s, %s, %s, %s, %s)",
-            (code, region_name.strip(), tax_name.strip(), rate_val, int(is_active))
+            """
+            INSERT INTO taxes
+            (tax_code, region_name, tax_name, rate, name, rate_percentage, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (code, region_name.strip(), tax_name.strip(), rate_val, tax_name.strip(), rate_val, int(is_active))
         )
         return True, f"Tax rule '{code}' created successfully."
 
@@ -94,8 +98,14 @@ class TaxManager:
             return False, f"Tax code '{code}' is already used by another rule."
 
         db.execute_query(
-            "UPDATE taxes SET tax_code = %s, region_name = %s, tax_name = %s, rate = %s, is_active = %s WHERE id = %s",
-            (code, region_name.strip(), tax_name.strip(), rate_val, int(is_active), int(tax_id))
+            """
+            UPDATE taxes
+            SET tax_code = %s, region_name = %s, tax_name = %s, rate = %s,
+                name = %s, rate_percentage = %s, is_active = %s
+            WHERE id = %s
+            """,
+            (code, region_name.strip(), tax_name.strip(), rate_val, tax_name.strip(),
+             rate_val, int(is_active), int(tax_id))
         )
         return True, f"Tax rule #{tax_id} updated successfully."
 
