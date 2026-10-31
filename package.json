@@ -1,0 +1,16 @@
+{
+  "name": "brightloop",
+  "version": "1.0.0",
+  "description": "BrightLoop - Role-Based Customer & Enterprise Operations Portal (Python + React)",
+  "scripts": {
+    "backend": "python app.py",
+    "backend:test": "python test_python_api.py",
+    "client": "npm.cmd --prefix client run dev",
+    "client:build": "npm.cmd --prefix client run build",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"PYTHON,CLIENT\" -c \"yellow.bold,cyan.bold\" \"python app.py\" \"npm.cmd --prefix client run dev\"",
+    "start": "npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
