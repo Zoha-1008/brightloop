@@ -586,6 +586,75 @@ def seed_sample_data():
             """,
             s
         )
+    # 6. Seed Member 3 Data (Taxes, Discounts, Invoices, Payments)
+    existing_taxes = db.fetch_all("SELECT COUNT(*) as count FROM taxes")
+    if not existing_taxes or existing_taxes[0]['count'] == 0:
+        print("[Database] Seeding Member 3 Billing, Tax & Discount data...")
+        # Taxes
+        taxes_data = [
+            ('TAX-US-STD', 'United States - Standard', 'State Sales Tax', 7.50, 1),
+            ('TAX-EU-VAT', 'European Union', 'VAT Standard Rate', 20.00, 1),
+            ('TAX-IN-GST', 'India - Pan India', 'GST (Goods & Services Tax)', 18.00, 1),
+            ('TAX-ZERO', 'Zero Tax Jurisdiction', 'Exempt / Zero Rate', 0.00, 1)
+        ]
+        for t in taxes_data:
+            db.execute_query(
+                "INSERT INTO taxes (tax_code, region_name, tax_name, rate, is_active) VALUES (%s, %s, %s, %s, %s)",
+                t
+            )
+
+        # Discounts
+        discounts_data = [
+            ('WELCOME20', 'New Subscriber Welcome Voucher (20% Off)', 'percentage', 20.00, 0.00, '2026-01-01', '2026-12-31', 500, 12, 1),
+            ('FLAT10OFF', 'Flat $10 Off Any Monthly Order', 'fixed', 10.00, 20.00, '2026-01-01', '2026-12-31', 200, 45, 1),
+            ('SUMMER50', 'Summer Promo Tier Campaign (50% Off)', 'percentage', 50.00, 50.00, '2026-06-01', '2026-08-31', 100, 88, 1),
+            ('ENTERPRISE100', 'Enterprise Tier Contract Voucher ($100 Off)', 'fixed', 100.00, 300.00, '2026-01-01', '2026-12-31', 50, 5, 1)
+        ]
+        for d in discounts_data:
+            db.execute_query(
+                "INSERT INTO discounts (code, description, discount_type, value, min_order_amount, valid_from, valid_until, usage_limit, times_used, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                d
+            )
+
+        # Invoices
+        tax_eu = db.fetch_one("SELECT id FROM taxes WHERE tax_code = %s", ('TAX-EU-VAT',))
+        tax_us = db.fetch_one("SELECT id FROM taxes WHERE tax_code = %s", ('TAX-US-STD',))
+        disc_w20 = db.fetch_one("SELECT id FROM discounts WHERE code = %s", ('WELCOME20',))
+        subs = db.fetch_all("SELECT id, customer_id, total_price FROM subscriptions ORDER BY id ASC")
+        
+        if subs:
+            invoices_data = [
+                ('INV-2026-0001', subs[0]['id'], subs[0]['customer_id'], '2026-10-01', '2026-10-15', 14.99, None, 0.00, tax_us['id'] if tax_us else None, 1.12, 16.11, 'Paid', 'Automatic subscription billing'),
+                ('INV-2026-0002', subs[1]['id'], subs[1]['customer_id'], '2026-10-15', '2026-10-30', 15.98, disc_w20['id'] if disc_w20 else None, 3.20, tax_eu['id'] if tax_eu else None, 2.56, 15.34, 'Paid', 'Promotional voucher applied'),
+                ('INV-2026-0003', subs[2]['id'], subs[2]['customer_id'], '2026-09-01', '2026-09-15', 69.00, None, 0.00, tax_us['id'] if tax_us else None, 5.18, 74.18, 'Paid', 'Standard renewal invoice'),
+                ('INV-2026-0004', subs[3]['id'], subs[3]['customer_id'], '2026-10-20', '2026-11-04', 59.99, None, 0.00, None, 0.00, 59.99, 'Pending', 'Awaiting customer wire transfer')
+            ]
+            for inv in invoices_data:
+                db.execute_query(
+                    """
+                    INSERT INTO invoices
+                    (invoice_number, subscription_id, customer_id, issue_date, due_date, subtotal, discount_id, discount_amount, tax_id, tax_amount, total_amount, status, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    inv
+                )
+
+            inv_list = db.fetch_all("SELECT id, customer_id, total_amount FROM invoices WHERE status = 'Paid' ORDER BY id ASC")
+            # Payments
+            if inv_list:
+                payments_data = [
+                    ('TXN-CC-9018241', inv_list[0]['id'], inv_list[0]['customer_id'], 'Credit Card', inv_list[0]['total_amount'], 'Success', 'Stripe Gateway settlement'),
+                    ('TXN-PP-3841029', inv_list[1]['id'], inv_list[1]['customer_id'], 'PayPal', inv_list[1]['total_amount'], 'Success', 'PayPal Express settlement'),
+                    ('TXN-UPI-7749102', inv_list[2]['id'], inv_list[2]['customer_id'], 'UPI', inv_list[2]['total_amount'], 'Success', 'Instant UPI mobile transfer')
+                ]
+                for p in payments_data:
+                    db.execute_query(
+                        """
+                        INSERT INTO payments (transaction_id, invoice_id, customer_id, payment_method, amount, status, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        p
+                    )
     print("[Database] Sample data seeding complete.")
 
 
