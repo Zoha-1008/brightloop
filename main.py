@@ -3,7 +3,7 @@ main.py - Main Application Launcher
 Subscription Management System
 
 Starts the system, initializes the database, and loads the active modules.
-Currently launches Member 2's Subscription Management Suite by default.
+Integrates Member 2 (Subscriptions Suite) and Member 3 (Billing & Invoicing Suite).
 """
 
 import sys
@@ -18,6 +18,7 @@ if CURRENT_DIR not in sys.path:
 
 from database import db, init_db
 from subscriptions.hub import SubscriptionHub
+from billing.hub import BillingHub
 
 
 class MainApplication(tk.Tk):
@@ -26,7 +27,7 @@ class MainApplication(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("BrightLoop — Subscription Management System")
-        self.geometry("1200x750")
+        self.geometry("1240x780")
         self.minsize(1000, 650)
 
         # Style configuration
@@ -36,6 +37,7 @@ class MainApplication(tk.Tk):
         except Exception:
             pass
 
+        self.current_hub = None
         self._create_menu()
         self._load_active_module()
 
@@ -52,8 +54,8 @@ class MainApplication(tk.Tk):
         # Modules Menu
         mod_menu = tk.Menu(menubar, tearoff=0)
         mod_menu.add_command(label="🔑 Authentication (Member 1)", command=lambda: self._placeholder_alert("Member 1: Auth"))
-        mod_menu.add_command(label="⚡ Subscriptions Suite (Member 2 - Active)", command=self._load_subscriptions)
-        mod_menu.add_command(label="💳 Billing & Invoices (Member 3)", command=lambda: self._placeholder_alert("Member 3: Billing"))
+        mod_menu.add_command(label="⚡ Subscriptions Suite (Member 2)", command=self._load_subscriptions)
+        mod_menu.add_command(label="💳 Billing & Invoices (Member 3 - Active)", command=self._load_billing)
         mod_menu.add_command(label="📊 Reports & Analytics (Member 4)", command=lambda: self._placeholder_alert("Member 4: Reports"))
         menubar.add_cascade(label="Modules", menu=mod_menu)
 
@@ -71,16 +73,24 @@ class MainApplication(tk.Tk):
         self.config(menu=menubar)
 
     def _load_active_module(self):
-        self.hub = SubscriptionHub(self)
-        self.hub.pack(fill=tk.BOTH, expand=True)
+        """Loads Member 3's Billing Hub as the default view."""
+        self._switch_hub(BillingHub)
+
+    def _switch_hub(self, hub_class):
+        if self.current_hub:
+            self.current_hub.destroy()
+        self.current_hub = hub_class(self)
+        self.current_hub.pack(fill=tk.BOTH, expand=True)
 
     def _load_subscriptions(self):
-        if hasattr(self, 'hub'):
-            self.hub.refresh_all()
+        self._switch_hub(SubscriptionHub)
+
+    def _load_billing(self):
+        self._switch_hub(BillingHub)
 
     def _refresh_current(self):
-        if hasattr(self, 'hub'):
-            self.hub.refresh_all()
+        if self.current_hub and hasattr(self.current_hub, 'refresh_all'):
+            self.current_hub.refresh_all()
 
     def _reseed_data(self):
         confirm = messagebox.askyesno("Re-seed Data", "Do you want to re-check database tables and ensure sample records are loaded?")
@@ -93,7 +103,9 @@ class MainApplication(tk.Tk):
         messagebox.showinfo(
             module_name,
             f"{module_name} is assigned to another team member.\n\n"
-            f"Currently active module: Member 2 (Subscriptions, Products, Plans, Variants)."
+            f"Active modules:\n"
+            f"• Member 2 (Subscriptions, Products, Plans, Variants)\n"
+            f"• Member 3 (Billing, Invoices, Payments, Discounts, Taxes)"
         )
 
     def _show_about(self):
@@ -104,7 +116,12 @@ class MainApplication(tk.Tk):
             "• products.py - Product Catalog & Categories\n"
             "• plans.py - Subscription Tiers & Billing Cycles\n"
             "• variants.py - Custom Add-ons & Plan Options\n"
-            "• subscriptions.py - Customer Subscription Lifecycle & MRR Tracking\n\n"
+            "• subscriptions.py - Customer Subscription Lifecycle\n\n"
+            "Member 3 Core Deliverables:\n"
+            "• taxes.py - Regional Tax Rules & VAT/GST Engine\n"
+            "• discounts.py - Promo Codes & Coupon Engine\n"
+            "• invoices.py - Statement Lifecycle & Itemized Receipts\n"
+            "• payments.py - Payment Gateways & Refund Management\n\n"
             f"Database Connected: {db.engine.upper()}"
         )
 
@@ -116,5 +133,5 @@ def main():
     app.mainloop()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
