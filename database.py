@@ -247,6 +247,79 @@ def init_db():
                 FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE RESTRICT,
                 FOREIGN KEY (variant_id) REFERENCES variants(id) ON DELETE SET NULL
             ) ENGINE=InnoDB;
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS taxes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                rate_percentage DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
+                is_active TINYINT(1) DEFAULT 1
+            ) ENGINE=InnoDB;
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS discounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                code VARCHAR(50) NOT NULL UNIQUE,
+                description TEXT,
+                discount_type VARCHAR(20) NOT NULL,
+                value DECIMAL(10, 2) NOT NULL,
+                min_purchase DECIMAL(10, 2) DEFAULT 0.00,
+                min_quantity INT DEFAULT 0,
+                start_date DATE,
+                end_date DATE,
+                usage_limit INT DEFAULT -1,
+                times_used INT DEFAULT 0,
+                is_active TINYINT(1) DEFAULT 1
+            ) ENGINE=InnoDB;
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invoices (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                invoice_number VARCHAR(50) NOT NULL UNIQUE,
+                subscription_id INT NULL,
+                customer_id INT NOT NULL,
+                invoice_date DATE NOT NULL,
+                due_date DATE NOT NULL,
+                subtotal DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                tax_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                discount_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                total_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                amount_paid DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                status VARCHAR(20) NOT NULL DEFAULT 'Confirmed',
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE SET NULL,
+                FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+            ) ENGINE=InnoDB;
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invoice_lines (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                invoice_id INT NOT NULL,
+                product_id INT NULL,
+                description VARCHAR(255) NOT NULL,
+                quantity INT NOT NULL DEFAULT 1,
+                unit_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                tax_amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                line_total DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB;
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS payments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                invoice_id INT NOT NULL,
+                customer_id INT NOT NULL,
+                payment_date DATE NOT NULL,
+                payment_method VARCHAR(50) NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                transaction_ref VARCHAR(100),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT,
+                FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+            ) ENGINE=InnoDB;
             """
         ]
     else:
@@ -360,6 +433,93 @@ def init_db():
                 FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE RESTRICT,
                 FOREIGN KEY (variant_id) REFERENCES variants(id) ON DELETE SET NULL
             );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS subscription_lines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subscription_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                variant_id INTEGER,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                unit_price REAL NOT NULL DEFAULT 0.0,
+                tax_amount REAL NOT NULL DEFAULT 0.0,
+                line_total REAL NOT NULL DEFAULT 0.0,
+                FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id)
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS taxes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                rate_percentage REAL NOT NULL DEFAULT 0.0,
+                is_active INTEGER DEFAULT 1
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS discounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT NOT NULL UNIQUE,
+                description TEXT,
+                discount_type TEXT NOT NULL,
+                value REAL NOT NULL,
+                min_purchase REAL DEFAULT 0.0,
+                min_quantity INTEGER DEFAULT 0,
+                start_date TEXT,
+                end_date TEXT,
+                usage_limit INTEGER DEFAULT -1,
+                times_used INTEGER DEFAULT 0,
+                is_active INTEGER DEFAULT 1
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invoices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_number TEXT NOT NULL UNIQUE,
+                subscription_id INTEGER,
+                customer_id INTEGER NOT NULL,
+                invoice_date TEXT NOT NULL,
+                due_date TEXT NOT NULL,
+                subtotal REAL NOT NULL DEFAULT 0.0,
+                tax_amount REAL NOT NULL DEFAULT 0.0,
+                discount_amount REAL NOT NULL DEFAULT 0.0,
+                total_amount REAL NOT NULL DEFAULT 0.0,
+                amount_paid REAL NOT NULL DEFAULT 0.0,
+                status TEXT NOT NULL DEFAULT 'Confirmed',
+                notes TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (subscription_id) REFERENCES subscriptions(id) ON DELETE SET NULL,
+                FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS invoice_lines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_id INTEGER NOT NULL,
+                product_id INTEGER,
+                description TEXT NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                unit_price REAL NOT NULL DEFAULT 0.0,
+                tax_amount REAL NOT NULL DEFAULT 0.0,
+                line_total REAL NOT NULL DEFAULT 0.0,
+                FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_id INTEGER NOT NULL,
+                customer_id INTEGER NOT NULL,
+                payment_date TEXT NOT NULL,
+                payment_method TEXT NOT NULL,
+                amount REAL NOT NULL DEFAULT 0.0,
+                transaction_ref TEXT,
+                notes TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE RESTRICT,
+                FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+            );
             """
         ]
 
@@ -368,6 +528,23 @@ def init_db():
 
     # In case teammate's customers table already existed without extra columns, add them safely
     ensure_customer_columns()
+
+    # High-performance indexes for < 2.0s SLA
+    indexes = [
+        "CREATE INDEX IF NOT EXISTS idx_subs_status ON subscriptions(status);",
+        "CREATE INDEX IF NOT EXISTS idx_subs_customer ON subscriptions(customer_id);",
+        "CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);",
+        "CREATE INDEX IF NOT EXISTS idx_invoices_due ON invoices(due_date);",
+        "CREATE INDEX IF NOT EXISTS idx_invoices_status_due ON invoices(status, due_date);",
+        "CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);",
+        "CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);",
+        "CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);"
+    ]
+    for idx_sql in indexes:
+        try:
+            db.execute_query(idx_sql)
+        except Exception:
+            pass
 
     seed_sample_data()
     print(f"[Database] Initialized successfully using {db.engine.upper()} engine.")
@@ -533,6 +710,7 @@ def seed_sample_data():
 
     # 4. Seed Variants
     variants_data = [
+                (pl_map['PLN-CRM-ENT'], 'VAR-ODOO-ENT', 'Odoo Enterprise Certified', 'Brand', 'Odoo Certified Bridge', 560.00, 'Active'),
         # CloudSync Starter variants
         (pl_map['PLN-CLOUD-M'], 'VAR-CLD-1TB', '1TB Extra Booster', 'Storage Capacity', '1TB', 5.00, 'Active'),
         (pl_map['PLN-CLOUD-M'], 'VAR-CLD-2TB', '2TB Power Pack', 'Storage Capacity', '2TB', 9.00, 'Active'),
@@ -656,6 +834,129 @@ def seed_sample_data():
                         p
                     )
     print("[Database] Sample data seeding complete.")
+
+
+
+
+def get_connection(db_path=None):
+    """Returns raw sqlite3 connection with Row factory for compatibility."""
+    if db_path:
+        conn = sqlite3.connect(db_path, timeout=30.0)
+        conn.row_factory = sqlite3.Row
+        return conn
+    return db.get_connection()
+
+
+def seed_billing_data(force=False):
+    """Seeds realistic invoices and payments for all customer subscriptions."""
+    inv_count = db.fetch_all("SELECT COUNT(*) as count FROM invoices")
+    if inv_count and inv_count[0]['count'] > 0 and not force:
+        return
+
+    import random
+    from datetime import datetime, timedelta
+
+    if force:
+        for tbl in ['payments', 'invoice_lines', 'invoices', 'discounts', 'taxes']:
+            try:
+                db.execute_query(f"DELETE FROM {tbl}")
+            except Exception:
+                pass
+
+    # 1. Taxes
+    taxes_data = [
+        ("Standard VAT / GST", 18.0, 1),
+        ("State Sales Tax", 8.25, 1),
+        ("Zero Tax", 0.0, 1)
+    ]
+    for t in taxes_data:
+        db.execute_query("INSERT INTO taxes (name, rate_percentage, is_active) VALUES (%s, %s, %s)", t)
+
+    # 2. Discounts
+    discounts_data = [
+        ("STARTUP20", "20% Startup Discount", "percentage", 20.0, 100.0, 1, "2026-01-01", "2026-12-31", 50, 12, 1),
+        ("FLAT50", "$50 Off Welcome Offer", "fixed", 50.0, 200.0, 1, "2026-01-01", "2026-12-31", 100, 38, 1),
+        ("ANNUAL15", "15% Annual Contract Rebate", "percentage", 15.0, 500.0, 2, "2026-01-01", "2026-12-31", -1, 45, 1)
+    ]
+    for d in discounts_data:
+        db.execute_query(
+            "INSERT INTO discounts (code, description, discount_type, value, min_purchase, min_quantity, start_date, end_date, usage_limit, times_used, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            d
+        )
+
+    # 3. Invoices and Payments for Subscriptions
+    subs = db.fetch_all("SELECT s.*, p.name as product_name FROM subscriptions s LEFT JOIN products p ON s.product_id = p.id")
+    if not subs:
+        return
+
+    today = datetime.now()
+    inv_counter = 1001
+    methods = ['Credit Card', 'Bank Transfer', 'Stripe', 'PayPal']
+
+    for s in subs:
+        cust_id = s['customer_id']
+        sub_id = s['id']
+        price = float(s.get('total_price') or 49.00)
+
+        # Create 2 to 4 historical invoices per subscription
+        cycles = 3 if s.get('status') == 'Active' else 1
+        for c in range(cycles):
+            inv_code = f"INV-2026-{inv_counter}"
+            inv_counter += 1
+
+            days_ago = max(3, (c + 1) * 28)
+            inv_dt = today - timedelta(days=days_ago)
+            due_dt = inv_dt + timedelta(days=30)
+            is_past_due = due_dt < today
+
+            subtotal = price
+            tax = round(subtotal * 0.18, 2)
+            discount = 0.0
+            total = round(subtotal + tax - discount, 2)
+
+            if is_past_due and random.random() < 0.6:
+                status = 'Overdue'
+                paid = 0.0
+            else:
+                status = 'Paid'
+                paid = total
+
+            inv_id = db.execute_query(
+                """
+                INSERT INTO invoices
+                (invoice_number, subscription_id, customer_id, invoice_date, due_date, subtotal, tax_amount, discount_amount, total_amount, amount_paid, status, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Automated BrightLoop Engine')
+                """,
+                (inv_code, sub_id, cust_id, inv_dt.strftime("%Y-%m-%d"), due_dt.strftime("%Y-%m-%d"), subtotal, tax, discount, total, paid, status)
+            )
+
+            if inv_id:
+                # Invoice line
+                db.execute_query(
+                    """
+                    INSERT INTO invoice_lines (invoice_id, product_id, description, quantity, unit_price, tax_amount, line_total)
+                    VALUES (%s, %s, %s, 1, %s, %s, %s)
+                    """,
+                    (inv_id, s.get('product_id'), f"{s.get('product_name') or 'Service'} Subscription Charge", subtotal, tax, total)
+                )
+
+                if status == 'Paid':
+                    pay_dt = (inv_dt + timedelta(days=random.randint(1, 10))).strftime("%Y-%m-%d")
+                    db.execute_query(
+                        """
+                        INSERT INTO payments (invoice_id, customer_id, payment_date, payment_method, amount, transaction_ref, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s, 'Settled via auto-pay')
+                        """,
+                        (inv_id, cust_id, pay_dt, random.choice(methods), total, f"TXN-{random.randint(100000, 999999)}")
+                    )
+
+    print("[Database] Invoices and Payments seeded successfully.")
+
+
+def seed_demo_data(force=False, db_path=None):
+    """Initializes schema and seeds demo data (both team models and billing)."""
+    init_db()
+    seed_billing_data(force=force)
 
 
 if __name__ == '__main__':
