@@ -90,3 +90,23 @@ Or run them in separate terminals:
 python test_python_api.py
 ```
 *(Executes all 12 test assertions verifying login, registration, role separation, forgot password, staff registration restriction, and table queries).*
+
+---
+
+## 🖥️ Desktop Subscription Management Suite
+
+The Member 2 Tkinter modules are available alongside the web portal. They use the shared
+`database.py` database manager and the same products, plans, variants, and subscriptions tables.
+
+```bash
+python main.py
+```
+
+Run the Member 2 CRUD and lifecycle checks with:
+
+```bash
+python test_member2.py
+```
+
+Individual modules can also be launched from `subscriptions/` (for example,
+`python subscriptions/products.py` or `python subscriptions/hub.py`).
