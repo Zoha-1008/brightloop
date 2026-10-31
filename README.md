@@ -110,3 +110,38 @@ python test_member2.py
 
 Individual modules can also be launched from `subscriptions/` (for example,
 `python subscriptions/products.py` or `python subscriptions/hub.py`).
+
+
+---
+
+## 💳 Desktop Billing, Invoicing & Payments Suite (Member 3)
+
+The Member 3 Tkinter modules provide an enterprise-grade financial core managing regional taxes, promotional coupons, invoice lifecycle, and multi-channel payment processing:
+
+- **`billing/taxes.py`**: Regional tax rules (VAT, GST, Sales Tax) with dynamic checkout calculation engine and interactive tester.
+- **`billing/discounts.py`**: Promotional discount voucher engine supporting percentage and flat rate discounts with date and minimum spend validations.
+- **`billing/invoices.py`**: Invoice lifecycle management (`Pending`, `Paid`, `Overdue`, `Cancelled`), formatted printable receipts, and `.txt` export.
+- **`billing/payments.py`**: Gateway transaction capture (`Credit Card`, `PayPal`, `Bank Transfer`, `UPI`), unique tracking ID generation, and refund handling.
+- **`billing/hub.py`**: Unified tabbed Billing Hub orchestrating all 4 sub-modules.
+
+### Launch Member 3 Suite
+Run the full desktop suite:
+```bash
+python main.py
+```
+*(Select **Modules** $\rightarrow$ **💳 Billing & Invoices (Member 3)** to switch to the Billing Hub)*
+
+Or launch Member 3 modules standalone:
+```bash
+python billing/hub.py
+python billing/invoices.py
+python billing/payments.py
+python billing/discounts.py
+python billing/taxes.py
+```
+
+### Run Member 3 Automated Test Suite
+```bash
+python test_member3.py
+```
+*(Executes automated test assertions covering tax calculations, coupon validation, invoice lifecycle, payment recording, and refund processing).*
